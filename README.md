@@ -29,14 +29,32 @@ cc -Wall -Wextra -Werror main.c libftprintf.a -I. -o test
 
 The code is split into three layers. Each layer only talks to the one below it.
 
-```mermaid
-flowchart LR
-    A["1. Parser<br/>ft_printf.c<br/>walks the format string"]
-    B["2. Dispatcher<br/>ft_handle_format.c<br/>specifier to printer"]
-    C["3. Printers<br/>putnbr, putstr, putptr, hex...<br/>build the output"]
-    D["ft_putchar_fd<br/>one char at a time"]
-    E[["write"]]
-    A --> B --> C --> D --> E
+```
+        ┌────────────────────────────────────────┐
+        │ 1. PARSER            (ft_printf.c)     │
+        │    walks the format string             │
+        └───────────────────┬────────────────────┘
+                            │  '%' + specifier
+                            ▼
+        ┌────────────────────────────────────────┐
+        │ 2. DISPATCHER   (ft_handle_format.c)   │
+        │    specifier  ->  right printer        │
+        └───────────────────┬────────────────────┘
+                            │
+                            ▼
+        ┌────────────────────────────────────────┐
+        │ 3. PRINTERS                            │
+        │    putnbr / putstr / putptr / hex      │
+        │    build the output                    │
+        └───────────────────┬────────────────────┘
+                            │
+                            ▼
+        ┌────────────────────────────────────────┐
+        │ ft_putchar_fd   (one char at a time)   │
+        └───────────────────┬────────────────────┘
+                            │
+                            ▼
+                      ( write )
 ```
 
 | Layer | Job |
@@ -57,57 +75,31 @@ flowchart LR
 
 If any `write` fails, the `-1` travels upward through every layer until `ft_printf` calls `handle_error` (`va_end` then `return -1`).
 
-<details>
-<summary>Full call graph (click to expand)</summary>
+### Call graph (who calls who)
 
-```mermaid
-flowchart TD
-    PF["ft_printf"]
-    PROC["ft_process_format"]
-    CONV["ft_handle_conversion"]
-    REG["ft_print_regular_char"]
-    ERR["handle_error"]
-    HF["ft_handle_format"]
-    UNK["ft_print_unknown"]
-    PNBR["ft_putnbr_fd"]
-    PUNS["ft_putnbr_unsigned_fd"]
-    PHEX["ft_putnbr_hex_fd"]
-    PHEXU["ft_putnbr_hex_upper_fd"]
-    PPTR["ft_putptr_fd"]
-    PHEXP["ft_putptr_hex"]
-    PSTRN["ft_putstr_n"]
-    PSTR["ft_putstr_fd"]
-    PCHAR["ft_putchar_fd"]
-    WRITE[["write"]]
-
-    PF --> PROC
-    PF -- "on -1" --> ERR
-    PROC -- "%" --> CONV
-    PROC -- "other" --> REG
-    CONV --> HF
-    REG --> WRITE
-    HF -- "d i" --> PNBR
-    HF -- "u" --> PUNS
-    HF -- "x" --> PHEX
-    HF -- "X" --> PHEXU
-    HF -- "p" --> PPTR
-    HF -- "s" --> PSTRN
-    HF -- "c %" --> PCHAR
-    HF -- "else" --> UNK
-    UNK --> PCHAR
-    PNBR --> PCHAR
-    PUNS --> PCHAR
-    PHEX --> PCHAR
-    PHEXU --> PCHAR
-    PPTR --> PSTRN
-    PPTR --> PHEXP
-    PHEXP --> PCHAR
-    PSTRN --> PSTR
-    PSTR --> PCHAR
-    PCHAR --> WRITE
 ```
+ft_printf
+├── ft_process_format
+│   ├── ft_print_regular_char ─────────────────────► write
+│   └── ft_handle_conversion
+│       └── ft_handle_format
+│           ├── 'c' '%'  ► ft_putchar_fd ──────────► write
+│           ├── 's'      ► ft_putstr_n
+│           │              └── ft_putstr_fd
+│           │                  └── ft_putchar_fd
+│           ├── 'p'      ► ft_putptr_fd
+│           │              ├── ft_putstr_n   ("(nil)" and "0x")
+│           │              └── ft_putptr_hex
+│           │                  └── ft_putchar_fd
+│           ├── 'd' 'i'  ► ft_putnbr_fd ───────────► ft_putchar_fd
+│           ├── 'u'      ► ft_putnbr_unsigned_fd ──► ft_putchar_fd
+│           ├── 'x'      ► ft_putnbr_hex_fd ───────► ft_putchar_fd
+│           ├── 'X'      ► ft_putnbr_hex_upper_fd ─► ft_putchar_fd
+│           └── else     ► ft_print_unknown ───────► ft_putchar_fd
+└── handle_error        (called when any step returns -1)
 
-</details>
+ft_putchar_fd ─────────────────────────────────────► write
+```
 
 <details>
 <summary>Function reference (click to expand)</summary>
