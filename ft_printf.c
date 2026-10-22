@@ -11,7 +11,6 @@
 /* ************************************************************************** */
 
 #include "ft_printf.h"
-#include <stdio.h>
 
 static int	handle_error(va_list *args)
 {
@@ -72,11 +71,56 @@ int	ft_printf(const char *format, ...)
 	va_end(args);
 	return (count);
 }
+/*
+#include <stdio.h>
+#include <limits.h>
 
-// int	main(void)
-// {
-// 	int	a = ft_printf("100%y\n");
-// 	//int	b = printf("100%y\n");
+int main()
+{
+int n = 42;
+char *s = NULL;
 
-// 	printf("a=%d", a);
-// }
+ft_printf("%c\n", 'A');
+printf("%c\n", 'A');
+
+ft_printf("%s\n", "hello");
+printf("%s\n", "hello");
+
+ft_printf("[%s]\n", s);
+printf("[%s]\n", s);
+
+ft_printf("%d\n", -42);
+printf("%d\n", -42);
+
+ft_printf("%d\n", INT_MIN);
+printf("%d\n", INT_MIN);
+
+ft_printf("%i\n", INT_MAX);
+printf("%i\n", INT_MAX);
+
+ft_printf("%u\n", UINT_MAX);
+printf("%u\n", UINT_MAX);
+
+ft_printf("%x\n", 255);
+printf("%x\n", 255);
+
+ft_printf("%X\n", 48879);
+printf("%X\n", 48879);
+
+ft_printf("%x\n", -1);
+printf("%x\n", -1);
+
+ft_printf("%p\n", (void *)0);
+printf("%p\n", (void *)0);
+
+ft_printf("%p\n", &n);
+printf("%p\n", &n);
+
+ft_printf("100%%\n");
+printf("100%%\n");
+
+ft_printf("%c %s %d %x\n", 'z', "ok", -7, 255);
+printf("%c %s %d %x\n", 'z', "ok", -7, 255);
+return (0);
+}
+*/

@@ -25,6 +25,58 @@ Usage:
 cc -Wall -Wextra -Werror main.c libftprintf.a -I. -o test
 ```
 
+## Variadic function (`stdarg.h`)
+
+`ft_printf` is a **variadic function**: it takes a fixed first argument (the format string) followed by `...`, an unknown number of extra arguments.
+
+```c
+int ft_printf(const char *format, ...);
+```
+
+C gives no way to ask "how many arguments did the caller pass?", so the **format string is the only source of truth**: each `%` tells us that one more argument is waiting, and which type it has. The `<stdarg.h>` macros are used to read them:
+
+| Macro | Job | Where it is used |
+|---|---|---|
+| `va_list args` | Holds the state of the argument list (a cursor). | Declared in `ft_printf` |
+| `va_start(args, format)` | Puts the cursor right after the last named parameter (`format`). | Start of `ft_printf` |
+| `va_arg(args, type)` | Returns the next argument as `type` and moves the cursor forward. | Dispatcher (`ft_handle_format`), once per conversion |
+| `va_end(args)` | Cleans up the list. Must be called before returning. | End of `ft_printf` and in `handle_error` |
+
+### Which type for which specifier
+
+| Specifier | `va_arg` type | Note |
+|---|---|---|
+| `%c` | `int` | `char` is promoted to `int` when passed through `...` |
+| `%s` | `char *` | `NULL` prints `(null)` |
+| `%p` | `void *` | cast to `uintptr_t` to print; `NULL` prints `(nil)` |
+| `%d` `%i` | `int` | |
+| `%u` `%x` `%X` | `unsigned int` | |
+| `%%` | none | no argument is consumed |
+
+### Flow of the `va_list`
+
+```
+ft_printf(format, ...)
+   va_list args;
+   va_start(args, format);        <- cursor placed after `format`
+        │
+        ▼
+   ft_process_format(..., &args)  <- passed down by pointer
+        │
+        ▼
+   ft_handle_format(spec, &args)
+        └── va_arg(*args, int)    <- cursor moves, one argument consumed
+        │
+        ▼
+   va_end(args);                  <- always, on success AND on error
+```
+
+Two rules to remember:
+
+- The `va_list` is passed **by pointer**, so every `va_arg` call advances the same cursor. If it were copied, the caller would not see the cursor move and the next conversion would read the wrong argument.
+- Every `va_start` must have a matching `va_end`, including on the error path (that is why `handle_error` calls `va_end`).
+- `%%` and unknown specifiers must **not** call `va_arg`, otherwise the arguments get out of sync.
+
 ## How it works
 
 The code is split into three layers. Each layer only talks to the one below it.
